@@ -1,0 +1,10 @@
+# Automatically generated file.
+build/
+sdkconfig
+sdkconfig.old
+sdkconfigs
+.vscode
+.devcontainer
+
+#
+export_idf_py.bat
