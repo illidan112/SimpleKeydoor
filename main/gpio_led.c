@@ -17,7 +17,7 @@
 
 static const char *TAG = "GPIO";
 
-#define BLINK_GPIO 5
+#define BLINK_GPIO 12
 
 static uint8_t s_led_state = 0;
 

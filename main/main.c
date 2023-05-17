@@ -24,24 +24,27 @@ void app_main(void)
   }
   ESP_ERROR_CHECK(ret);
 
-  if (wifi_init_sta() != ESP_OK) {             //Connecting to wifi station
-    ESP_LOGE(TAG, "WI-FI conneting failed");
-    //  esp_restart();
-  }else 
-  if(tcpServer_create() != ESP_OK){         //Start TCP server for the first time
-    ESP_LOGE(TAG, "TCP crearing failed");
-    // esp_restart();
-  }else
   if(gpio_init() != ESP_OK){
-    ESP_LOGE(TAG, "GPIO crearing failed");
-    // esp_restart();
-  }else
-  if(servo_init() != ESP_OK){         //Start TCP server for the first time
-    ESP_LOGE(TAG, "SERVO crearing failed");
-    // esp_restart();
+    ESP_LOGE(TAG, "GPIO creating failed");
+    esp_restart();
   }else{
-    ESP_LOGI(TAG, "Initialization was successful");
-  }
-  
+    if (wifi_init_sta() != ESP_OK) {             //Connecting to wifi station
+      ESP_LOGE(TAG, "WI-FI conneting failed");
+       esp_restart();
+    }else{
+      if(tcpServer_create() != ESP_OK){         //Start TCP server for the first time
+      ESP_LOGE(TAG, "TCP creating failed");
+      esp_restart();
+      }else{
+        if(servo_init() != ESP_OK){
+        ESP_LOGE(TAG, "SERVO creating failed");
+        esp_restart();
+        }else{
+          ESP_LOGI(TAG, "Initialization was successful");
+          set_port_level(1);
+        }
+      }
+    }
+  }  
     
 }

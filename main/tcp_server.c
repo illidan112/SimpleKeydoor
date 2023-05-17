@@ -19,7 +19,7 @@
 #include <lwip/netdb.h>
 
 #include "tcp_server.h"
-#include "gpio_led.h"
+// #include "gpio_led.h"
 #include "servo.h"
 
 
@@ -33,36 +33,7 @@ TaskHandle_t xTCPServerHandle = NULL;
 static const char *TAG = "TCP";
 // static const char *MDNS = "MDNS";
 
-// static void do_retransmit(const int sock)
-// {
-//     int len;
-//     char rx_buffer[128];
-
-//     do {
-//         len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
-//         if (len < 0) {
-//             ESP_LOGE(TAG, "Error occurred during receiving: errno %d", errno);
-//         } else if (len == 0) {
-//             ESP_LOGW(TAG, "Connection closed");
-//         } else {
-//             rx_buffer[len] = 0; // Null-terminate whatever is received and treat it like a string
-//             ESP_LOGI(TAG, "Received %d bytes: %s", len, rx_buffer);
-
-//             // send() can return less bytes than supplied length.
-//             // Walk-around for robust implementation.
-//             int to_write = len;
-//             while (to_write > 0) {
-//                 int written = send(sock, rx_buffer + (len - to_write), to_write, 0);
-//                 if (written < 0) {
-//                     ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
-//                 }
-//                 to_write -= written;
-//             }
-//         }
-//     } while (len > 0);
-// }
-
-uint8_t receiveCommand(const int sock){
+void receiveCommand(const int sock){
 
     int len;
     char rx_buffer[128];
@@ -79,34 +50,37 @@ uint8_t receiveCommand(const int sock){
             rx_buffer[len] = 0; // Null-terminate whatever is received and treat it like a string
             ESP_LOGI(TAG, "Received %d bytes: %s", len, rx_buffer);
 
+            //Convert string to int
             cmd_num = atoi (rx_buffer);
             ESP_LOGI (TAG, "receive command: %d",cmd_num);
 
-            if(cmd_num == 101){
-                ESP_LOGI(TAG, "Turn on");
-                rotate(true);
-                // set_port_level(1);
-            }else if(cmd_num == 202){
-                ESP_LOGI(TAG, "Turn off");
-                // set_port_level(0);
-                rotate(false);
-            }else{
-                ESP_LOGW(TAG, "Unknown command");
+            //
+            switch(cmd_num){
+                case 101:
+
+                    ESP_LOGI(TAG, "Opening");
+                    rotate(true);
+
+                    break;
+                
+                case 202:
+
+                    ESP_LOGI(TAG, "Closing");
+                    rotate(false);
+
+                    break;
+                
+                default:
+                    ESP_LOGW(TAG, "Unknown command");
+                    break;
             }
         }
     } while (len > 0);
-
-   //Convert string to int
-    // cmd_num = atoi (rx_buffer);
-    // ESP_LOGI (TAG, "receive command: %d",cmd_num);
-
-    return cmd_num;
 
 }
 
 static void tcp_server_task(void *pvParameters)
 {
-    uint8_t mode_number = 0;
     char addr_str[128];
     int addr_family = (int)pvParameters;
     int ip_protocol = 0;
@@ -191,16 +165,7 @@ static void tcp_server_task(void *pvParameters)
 #endif
         ESP_LOGI(TAG, "Socket accepted ip address: %s", addr_str);
 
-        mode_number = receiveCommand(sock);
-        // if(mode_number == 1){
-        //     ESP_LOGI(TAG, "Turn on");
-        //     set_port_level(1);
-        // }else if(mode_number == 0){
-        //     ESP_LOGI(TAG, "Turn off");
-        //     set_port_level(0);
-        // }else{
-        //     ESP_LOGW(TAG, "Unknown command");
-        // }
+        receiveCommand(sock);
 
         shutdown(sock, 0);
         close(sock);

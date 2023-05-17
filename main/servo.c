@@ -15,12 +15,15 @@ static const char *TAG = "SERV";
 // Please consult the datasheet of your servo before changing the following parameters
 #define SERVO_MIN_PULSEWIDTH_US 500  // Minimum pulse width in microsecond
 #define SERVO_MAX_PULSEWIDTH_US 2500  // Maximum pulse width in microsecond
-#define SERVO_MIN_DEGREE        -90   // Minimum angle
-#define SERVO_MAX_DEGREE        90    // Maximum angle
+#define SERVO_MIN_DEGREE        0   // Minimum angle
+#define SERVO_MAX_DEGREE        180    // Maximum angle
 
 #define SERVO_PULSE_GPIO             13        // GPIO connects to the PWM signal line
 #define SERVO_TIMEBASE_RESOLUTION_HZ 1000000  // 1MHz, 1us per tick
 #define SERVO_TIMEBASE_PERIOD        20000    // 20000 ticks, 20ms
+
+#define SERVO_OPEN_DEGREE        179
+#define SERVO_CLOSE_DEGREE       95
 
 static inline uint32_t example_angle_to_compare(int angle)
 {
@@ -81,7 +84,7 @@ esp_err_t servo_init(void)
     ESP_ERROR_CHECK(mcpwm_new_generator(oper, &generator_config, &generator));
 
     // set the initial compare value, so that the servo will spin to the center position
-    ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator, example_angle_to_compare(0)));
+    ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator, example_angle_to_compare(SERVO_CLOSE_DEGREE)));
 
     ESP_LOGI(TAG, "Set generator action on timer and compare event");
     // go high on counter empty
@@ -97,31 +100,17 @@ esp_err_t servo_init(void)
     ESP_ERROR_CHECK(mcpwm_timer_enable(timer));
     ESP_ERROR_CHECK(mcpwm_timer_start_stop(timer, MCPWM_TIMER_START_NO_STOP));
 
-    // int angle = 0;
-    // int step = 30;
-    // while (1) {
-    //     ESP_LOGI(TAG, "Angle of rotation: %d", angle);
-    //     ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator, example_angle_to_compare(angle)));
-    //     vTaskDelay(pdMS_TO_TICKS(1000));
-    //     //Add delay, since it takes time for servo to rotate, usually 200ms/60degree rotation under 5V power supply
-    //     if ((angle + step) > 60 || (angle + step) < -60) {
-    //         step *= -1;
-    //     }
-    //     angle += step;
-    // }
-
-    // loop();
     return ESP_OK;
 }
 
 void rotate(bool on_off){
 
-    uint32_t angle = 0;
+    uint32_t angle = SERVO_CLOSE_DEGREE;
     if(on_off){
-        angle = 89;
-        ESP_LOGI(TAG, "ON  door");
+        angle = SERVO_OPEN_DEGREE;
+        ESP_LOGI(TAG, "Opened");
     }else {
-        ESP_LOGI(TAG, "OFF door");
+        ESP_LOGI(TAG, "Closed");
     }
     ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator, example_angle_to_compare(angle)));
 
