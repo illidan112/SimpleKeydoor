@@ -22,61 +22,73 @@
 // #include "gpio_led.h"
 #include "servo.h"
 
-
-#define PORT                        CONFIG_PORT
-#define KEEPALIVE_IDLE              CONFIG_KEEPALIVE_IDLE
-#define KEEPALIVE_INTERVAL          CONFIG_KEEPALIVE_INTERVAL
-#define KEEPALIVE_COUNT             CONFIG_KEEPALIVE_COUNT
+#define PORT CONFIG_PORT
+#define KEEPALIVE_IDLE CONFIG_KEEPALIVE_IDLE
+#define KEEPALIVE_INTERVAL CONFIG_KEEPALIVE_INTERVAL
+#define KEEPALIVE_COUNT CONFIG_KEEPALIVE_COUNT
 
 TaskHandle_t xTCPServerHandle = NULL;
 
 static const char *TAG = "TCP";
 // static const char *MDNS = "MDNS";
 
-void receiveCommand(const int sock){
+void receiveCommand(const int sock)
+{
 
     int len;
     char rx_buffer[128];
     uint8_t cmd_num = 11;
 
-    //receive command
-    do {
+    // receive command
+    do
+    {
         len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
-        if (len < 0) {
+        if (len < 0)
+        {
             ESP_LOGE(TAG, "Error occurred during receiving: errno %d", errno);
-        } else if (len == 0) {
+        }
+        else if (len == 0)
+        {
             ESP_LOGW(TAG, "Connection closed");
-        } else {
+        }
+        else
+        {
             rx_buffer[len] = 0; // Null-terminate whatever is received and treat it like a string
             ESP_LOGI(TAG, "Received %d bytes: %s", len, rx_buffer);
 
-            //Convert string to int
-            cmd_num = atoi (rx_buffer);
-            ESP_LOGI (TAG, "receive command: %d",cmd_num);
+            // Convert string to int
+            cmd_num = atoi(rx_buffer);
+            ESP_LOGI(TAG, "receive command: %d", cmd_num);
 
             //
-            switch(cmd_num){
-                case 101:
+            switch (cmd_num)
+            {
+            case 101:
+                ESP_LOGI(TAG, "Opening");
+                opener(true, FIRST_DOOR);
+                break;
 
-                    ESP_LOGI(TAG, "Opening");
-                    rotate(true);
+            case 202:
+                ESP_LOGI(TAG, "Closing");
+                opener(false, FIRST_DOOR);
+                break;
 
-                    break;
-                
-                case 202:
+            case 111:
+                ESP_LOGI(TAG, "Opening");
+                opener(true, SECOND_DOOR);
+                break;
 
-                    ESP_LOGI(TAG, "Closing");
-                    rotate(false);
+            case 222:
+                ESP_LOGI(TAG, "Closing");
+                opener(false, SECOND_DOOR);
+                break;
 
-                    break;
-                
-                default:
-                    ESP_LOGW(TAG, "Unknown command");
-                    break;
+            default:
+                ESP_LOGW(TAG, "Unknown command");
+                break;
             }
         }
     } while (len > 0);
-
 }
 
 static void tcp_server_task(void *pvParameters)
@@ -90,7 +102,8 @@ static void tcp_server_task(void *pvParameters)
     int keepCount = KEEPALIVE_COUNT;
     struct sockaddr_storage dest_addr;
 
-    if (addr_family == AF_INET) {
+    if (addr_family == AF_INET)
+    {
         struct sockaddr_in *dest_addr_ip4 = (struct sockaddr_in *)&dest_addr;
         dest_addr_ip4->sin_addr.s_addr = htonl(INADDR_ANY);
         dest_addr_ip4->sin_family = AF_INET;
@@ -98,7 +111,8 @@ static void tcp_server_task(void *pvParameters)
         ip_protocol = IPPROTO_IP;
     }
 #ifdef CONFIG_IPV6
-    else if (addr_family == AF_INET6) {
+    else if (addr_family == AF_INET6)
+    {
         struct sockaddr_in6 *dest_addr_ip6 = (struct sockaddr_in6 *)&dest_addr;
         bzero(&dest_addr_ip6->sin6_addr.un, sizeof(dest_addr_ip6->sin6_addr.un));
         dest_addr_ip6->sin6_family = AF_INET6;
@@ -108,7 +122,8 @@ static void tcp_server_task(void *pvParameters)
 #endif
 
     int listen_sock = socket(addr_family, SOCK_STREAM, ip_protocol);
-    if (listen_sock < 0) {
+    if (listen_sock < 0)
+    {
         ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
         vTaskDelete(NULL);
         return;
@@ -124,7 +139,8 @@ static void tcp_server_task(void *pvParameters)
     ESP_LOGI(TAG, "Socket created");
 
     int err = bind(listen_sock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-    if (err != 0) {
+    if (err != 0)
+    {
         ESP_LOGE(TAG, "Socket unable to bind: errno %d", errno);
         ESP_LOGE(TAG, "IPPROTO: %d", addr_family);
         goto CLEAN_UP;
@@ -132,19 +148,22 @@ static void tcp_server_task(void *pvParameters)
     ESP_LOGI(TAG, "Socket bound, port %d", PORT);
 
     err = listen(listen_sock, 1);
-    if (err != 0) {
+    if (err != 0)
+    {
         ESP_LOGE(TAG, "Error occurred during listen: errno %d", errno);
         goto CLEAN_UP;
     }
 
-    while (1) {
+    while (1)
+    {
 
         ESP_LOGI(TAG, "Socket listening");
 
         struct sockaddr_storage source_addr; // Large enough for both IPv4 or IPv6
         socklen_t addr_len = sizeof(source_addr);
         int sock = accept(listen_sock, (struct sockaddr *)&source_addr, &addr_len);
-        if (sock < 0) {
+        if (sock < 0)
+        {
             ESP_LOGE(TAG, "Unable to accept connection: errno %d", errno);
             break;
         }
@@ -155,11 +174,13 @@ static void tcp_server_task(void *pvParameters)
         setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &keepInterval, sizeof(int));
         setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &keepCount, sizeof(int));
         // Convert ip address to string
-        if (source_addr.ss_family == PF_INET) {
+        if (source_addr.ss_family == PF_INET)
+        {
             inet_ntoa_r(((struct sockaddr_in *)&source_addr)->sin_addr, addr_str, sizeof(addr_str) - 1);
         }
 #ifdef CONFIG_IPV6
-        else if (source_addr.ss_family == PF_INET6) {
+        else if (source_addr.ss_family == PF_INET6)
+        {
             inet6_ntoa_r(((struct sockaddr_in6 *)&source_addr)->sin6_addr, addr_str, sizeof(addr_str) - 1);
         }
 #endif
@@ -181,7 +202,8 @@ esp_err_t tcpServer_create()
 
     // initialise_mdns();
 
-    if(xTCPServerHandle == NULL){
+    if (xTCPServerHandle == NULL)
+    {
 
         portBASE_TYPE xStatus = pdPASS;
 
@@ -192,15 +214,17 @@ esp_err_t tcpServer_create()
         xStatus = xTaskCreate(tcp_server_task, "tcp_server", 4096, (void *)AF_INET6, 5, &xTCPServerHandle);
 #endif
 
-        if( xStatus != pdPASS || xTCPServerHandle == NULL  ){
+        if (xStatus != pdPASS || xTCPServerHandle == NULL)
+        {
             ESP_LOGE(TAG, "TCPServerTask create error");
             return ESP_FAIL;
         }
 
         return ESP_OK;
-    }else{
+    }
+    else
+    {
         ESP_LOGE(TAG, "Almost exist");
         return ESP_FAIL;
     }
-
 }
